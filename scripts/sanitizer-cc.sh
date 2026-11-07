@@ -5,4 +5,4 @@ sanitizer_link=(-no-pie)
 for argument in "$@"; do
     case "$argument" in -c|-S|-E|--version) sanitizer_link=();; esac
 done
-exec "${SANITIZER_CC:-gcc}" "$@" -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined "${sanitizer_link[@]}"
+exec "${SANITIZER_CC:-gcc}" "$@" -g -fno-omit-frame-pointer -fsanitize=address,undefined "${sanitizer_link[@]}"
