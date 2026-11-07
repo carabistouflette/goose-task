@@ -14,6 +14,10 @@ fn rejected(count: i64, edges: const task::Edge[:], limits: task::Limits&, expec
 }
 fn validation() {
     var limits = task::Limits { .. };
+    let bad_order, bad = task::plan(3, [task::Edge { 0, 1 }, task::Edge { -2, 5 }, task::Edge { 7, 0 }], limits);
+    assert(bad_order.len == 0 && bad.kind == task::ErrorKind.InvalidTask && bad.edge == 1 && bad.task == -2);
+    let bad_after_order, bad_after = task::plan(3, [task::Edge { 0, 1 }, task::Edge { 1, -7 }], limits);
+    assert(bad_after_order.len == 0 && bad_after.edge == 1 && bad_after.task == -7);
     rejected(-1, [], limits, task::ErrorKind.TaskLimit);
     rejected(task::MAX_TASKS + 1, [], limits, task::ErrorKind.TaskLimit);
     rejected(2, [task::Edge { -1, 0 }], limits, task::ErrorKind.InvalidTask);
@@ -103,8 +107,22 @@ fn boundaries() {
     chain.push(task::Edge { 0, 1 });
     rejected(2, chain, limits, task::ErrorKind.EdgeLimit);
 }
+fn wide_success() {
+    var limits = task::Limits { .. };
+    var s = task::Scheduler { .. };
+    assert(task::start(s, task::MAX_TASKS, [], task::MAX_TASKS, limits).kind == task::ErrorKind.None);
+    for i in task::MAX_TASKS { assert(task::take(s).task == i); }
+    assert(task::summary(s).running == task::MAX_TASKS);
+    assert(task::take(s).kind == task::DispatchKind.Waiting);
+    for i in task::MAX_TASKS {
+        assert(task::finish(s, task::MAX_TASKS - 1 - i, true).kind == task::ErrorKind.None);
+        assert(task::summary(s).running == task::MAX_TASKS - 1 - i);
+    }
+    assert(task::take(s).kind == task::DispatchKind.Done);
+    assert(task::summary(s).succeeded == task::MAX_TASKS);
+}
 fn main() {
-    validation(); failures_and_ownership(); boundaries();
+    validation(); failures_and_ownership(); boundaries(); wide_success();
     var limits = task::Limits { .. };
     let edges = [task::Edge { 0, 2 }, task::Edge { 1, 2 }, task::Edge { 2, 3 }, task::Edge { 0, 2 }];
     let order, error = task::plan(5, edges, limits);
