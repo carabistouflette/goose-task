@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-11-07T04:09:25.565385+00:00",
+  "source_head": "033eaa5b8a621fafe366bab40baecdea9e8429ff",
+  "source_status": "",
+  "sources": {
+    ".github/workflows/ci.yml": "790a20db133c8f9545fa5ae2be95145616dba69330960c08d301d7a866aef7fe",
+    ".gitignore": "1ce56df2d9f4addc228ee5d2734e2d26b3e616597abd87d983cb98c207cc3fdd",
+    "CHANGELOG.md": "7f5c52a2b35b8a62110575435592c429c86440073cd50827d0de2e9eb6623fd4",
+    "CONTRIBUTING.md": "0f0efdd3c4951d080a7513d510eb5d4a3364edbc10c915bcca55dca43b403ab5",
+    "GOOSE_REVISION": "64e14b181dfe96743211738fb0f1b1f7798ea940da2ca50ff122e6f028c24e15",
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "Makefile": "d1390a9470deb0fb35e85866bd2872dbb7f247af3528e39da55cdc71e19d57a6",
+    "README.md": "b20253eb0637719e04053b8d6b4dac7ff0ae4657acb7e71d4c87089409c2155e",
+    "SECURITY.md": "952d51350ebeb88c32313ef1648931e0bc6512e9a6db9ed4749aa87d83916011",
+    "THIRD_PARTY_NOTICES.md": "f071caf24c422a1ae1601c4f19933ecca017ec4d0bb93e3a805f48bdbaba3567",
+    "bench/README.md": "4f80616ae70c81dbfba7eee872a76f8e929b25dccc386dd547dfd39f83129983",
+    "bench/bench.goose": "590e3fcc17ec77bdb58b9f838569e5ea576404f201e37283d8d5d23bb25781f3",
+    "docs/api.md": "44ea10575a1b0891ac19505a9c79f0ca57ee3dae03cc60f5d1fd1d36a4a1f2e5",
+    "docs/design.md": "588b56a5cb5b2e08b673fe24f80e372c9ddadb21303cfd8e128c3368f19e28e6",
+    "docs/testing.md": "17fc3772da327f18635259f20b7c2cb3aa2d4a603c3a7b87fe3d0660e7fdaf05",
+    "examples/build.goose": "63d5971e2d9eb160749015a7c1b53d75d9f40c34b550db90d8c1201030d334ea",
+    "examples/dependencies.goose": "520ef9bef45b13c9e6d57f59e1aea4a7296c0cc80347bdfc915eebbea0703183",
+    "scripts/benchmark.py": "e9866e2ce019788427e00c9f2ee3dd00db0f0d0cebec2c7ca71e3e022c19da1c",
+    "scripts/sanitizer-cc.sh": "4bf207e7034fdda87b9653ae4326e51d8b176a174125d69bdc8b9050fb8f25cc",
+    "scripts/setup-goose.sh": "399d4a87702b8ecf92138f0f78b7422a0225b942f0e24ad9965f09f06f4fbb84",
+    "task.goose": "5711c0966685f87ad04df51d2e9de08cf636b2a1ac6aa05c78f19e1f24db6c46",
+    "tests/api.goose": "04564eefe8584504b6b0f251636497f07b0b9ee16dbc4a4dc43200f5b352e5e4",
+    "tests/model.py": "376a3856881e4069bb4037a8a587070e4b95d2df3cbce939801e12b87ddda8bc",
+    "tests/oracle.goose": "29f963df91a304deb174f0b264bf3e85ff945fd342c8ba79fdde4800b1c562ea"
+  },
+  "compiler_revision": "eadca409f68210893f366e60d0c2f0dc29a339be",
+  "compiler_sha256": "7ffde13da95fbbdaa15b27419494fc9b71f2c91c0b4c4d732f51815e928a4b56",
+  "executable_sha256": "3f5f7599d4738391c1b23c652a14c18172b178848ae83ce0d66b458dffbe62fa",
+  "cc": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin",
+  "cc_sha256": "5cb1c0c669bf0d2655933374723967259e78704338c370101843575f524c91bb",
+  "platform": "Linux-7.2.11-arch1-1-x86_64-with-glibc2.44",
+  "build_flags": [
+    "-O2"
+  ],
+  "iterations": 10,
+  "notes": "Local shared-host smoke. No competitor or speedup claim. Initialization excluded from success/failure phases.",
+  "samples": [
+    "independent\tplan\t596357\t10\nindependent\tsuccess\t165741\t10\nindependent\tfailure\t194118\t10\nreverse_chain\tplan\t1033647\t10\nreverse_chain\tsuccess\t619464\t10\nreverse_chain\tfailure\t364905\t10\nwide\tplan\t880444\t10\nwide\tsuccess\t296065\t10\nwide\tfailure\t128541\t10\noverlapping_failures\tplan\t1076702\t10\noverlapping_failures\tsuccess\t797563\t10\noverlapping_failures\tfailure\t357970\t10\nduplicates\tplan\t13030792\t10\nduplicates\tsuccess\t3267398\t10\nduplicates\tfailure\t574357\t10",
+    "independent\tplan\t452366\t10\nindependent\tsuccess\t145878\t10\nindependent\tfailure\t187753\t10\nreverse_chain\tplan\t715798\t10\nreverse_chain\tsuccess\t374679\t10\nreverse_chain\tfailure\t209969\t10\nwide\tplan\t412526\t10\nwide\tsuccess\t237880\t10\nwide\tfailure\t97098\t10\noverlapping_failures\tplan\t644081\t10\noverlapping_failures\tsuccess\t366087\t10\noverlapping_failures\tfailure\t214116\t10\nduplicates\tplan\t4261388\t10\nduplicates\tsuccess\t885646\t10\nduplicates\tfailure\t574998\t10",
+    "independent\tplan\t390167\t10\nindependent\tsuccess\t153785\t10\nindependent\tfailure\t185828\t10\nreverse_chain\tplan\t778027\t10\nreverse_chain\tsuccess\t361272\t10\nreverse_chain\tfailure\t201391\t10\nwide\tplan\t429362\t10\nwide\tsuccess\t286780\t10\nwide\tfailure\t99935\t10\noverlapping_failures\tplan\t682436\t10\noverlapping_failures\tsuccess\t383458\t10\noverlapping_failures\tfailure\t200003\t10\nduplicates\tplan\t4953751\t10\nduplicates\tsuccess\t928558\t10\nduplicates\tfailure\t601078\t10",
+    "independent\tplan\t591256\t10\nindependent\tsuccess\t167515\t10\nindependent\tfailure\t194349\t10\nreverse_chain\tplan\t1111103\t10\nreverse_chain\tsuccess\t590087\t10\nreverse_chain\tfailure\t374127\t10\nwide\tplan\t820266\t10\nwide\tsuccess\t309170\t10\nwide\tfailure\t142785\t10\noverlapping_failures\tplan\t1150050\t10\noverlapping_failures\tsuccess\t770048\t10\noverlapping_failures\tfailure\t384462\t10\nduplicates\tplan\t12478508\t10\nduplicates\tsuccess\t3164853\t10\nduplicates\tfailure\t577231\t10",
+    "independent\tplan\t561123\t10\nindependent\tsuccess\t149344\t10\nindependent\tfailure\t180720\t10\nreverse_chain\tplan\t989208\t10\nreverse_chain\tsuccess\t587722\t10\nreverse_chain\tfailure\t365132\t10\nwide\tplan\t931663\t10\nwide\tsuccess\t289803\t10\nwide\tfailure\t129410\t10\noverlapping_failures\tplan\t1261526\t10\noverlapping_failures\tsuccess\t793817\t10\noverlapping_failures\tfailure\t388784\t10\nduplicates\tplan\t12538932\t10\nduplicates\tsuccess\t3122424\t10\nduplicates\tfailure\t569446\t10"
+  ]
+}

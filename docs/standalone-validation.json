@@ -1,0 +1,33 @@
+{
+  "source_head": "033eaa5b8a621fafe366bab40baecdea9e8429ff",
+  "compiler_revision": "eadca409f68210893f366e60d0c2f0dc29a339be",
+  "compiler_source_head": "eadca409f68210893f366e60d0c2f0dc29a339be",
+  "compiler_sha256": "7ffde13da95fbbdaa15b27419494fc9b71f2c91c0b4c4d732f51815e928a4b56",
+  "checks": [
+    {
+      "command": [
+        "make",
+        "check",
+        "test",
+        "test-debug",
+        "property",
+        "CC=gcc",
+        "GOOSE=${GOOSE}"
+      ],
+      "exit_code": 0,
+      "seconds": 4.674454422085546,
+      "output": "\"${GOOSE}\" format --check task.goose tests examples bench\n\"${GOOSE}\" check tests/api.goose\n\"${GOOSE}\" check tests/oracle.goose\n\"${GOOSE}\" check examples/build.goose\n\"${GOOSE}\" check examples/dependencies.goose\n\"${GOOSE}\" check bench/bench.goose\npython3 -m py_compile tests/model.py scripts/benchmark.py\nmkdir -p .build\n\"${GOOSE}\" run tests/api.goose\napi passed\n\"${GOOSE}\" build tests/api.goose --cc \"gcc\" -O2 -o .build/api\nbuilt .build/api\n./.build/api\napi passed\n\"${GOOSE}\" run examples/build.goose\nrun compile\nrun lint\nrun test\nrun package\n\"${GOOSE}\" run examples/dependencies.goose\ndependency validation passed\nmkdir -p .build\n\"${GOOSE}\" build tests/api.goose --cc \"gcc\" --debug --no-bce -o .build/api-debug\nbuilt .build/api-debug\n./.build/api-debug\napi passed\nmkdir -p .build\n\"${GOOSE}\" build tests/oracle.goose --cc \"gcc\" -O2 -o .build/oracle\nbuilt .build/oracle\npython3 tests/model.py .build/oracle\nmodel passed: 6127 graphs; exhaustive small graphs and random completion traces\n\"${GOOSE}\" build tests/oracle.goose --cc \"gcc\" --debug --no-bce -o .build/oracle-debug\nbuilt .build/oracle-debug\npython3 tests/model.py .build/oracle-debug\nmodel passed: 6127 graphs; exhaustive small graphs and random completion traces\n"
+    },
+    {
+      "command": [
+        "make",
+        "sanitize",
+        "SANITIZER_CC=gcc",
+        "GOOSE=${GOOSE}"
+      ],
+      "exit_code": 0,
+      "seconds": 15.373306252993643,
+      "output": "mkdir -p .build\nSANITIZER_CC=\"gcc\" \"${GOOSE}\" build tests/api.goose --cc \"${CHECKOUT}/scripts/sanitizer-cc.sh\" --standalone --debug --no-bce -o .build/api-sanitize\nbuilt .build/api-sanitize\nASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ./.build/api-sanitize\napi passed\nSANITIZER_CC=\"gcc\" \"${GOOSE}\" build tests/oracle.goose --cc \"${CHECKOUT}/scripts/sanitizer-cc.sh\" --standalone --debug --no-bce -o .build/oracle-sanitize\nbuilt .build/oracle-sanitize\nASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 python3 tests/model.py .build/oracle-sanitize\nmodel passed: 6127 graphs; exhaustive small graphs and random completion traces\nSANITIZER_CC=\"gcc\" \"${GOOSE}\" build tests/api.goose --cc \"${CHECKOUT}/scripts/sanitizer-cc.sh\" --standalone -O2 --no-bce -o .build/api-sanitize-optimized\nbuilt .build/api-sanitize-optimized\nASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 ./.build/api-sanitize-optimized\napi passed\n"
+    }
+  ]
+}
