@@ -46,9 +46,9 @@ fn main() {
 ```
 
 [Complete build example](examples/build.goose) and [dependency validation](examples/dependencies.goose)
-are checked by Make. Honk's dependency-cycle check is the proposed first consumer;
-Honk has not been migrated. Graph orientation and execution order require separate
-consumer validation.
+are checked by Make. [Qualified consumers](docs/consumers.md) include Honk's
+dependency validation and opt-in parallel tests, plus goose-msgpack's decoded
+plan example. Each consumer owns its execution and input-validation policies.
 
 ## Contracts and limits
 
