@@ -14,6 +14,8 @@ Requirements: Git, CMake 3.27+, a C/C++20 toolchain and Python 3 for model tests
 From a standalone checkout:
 
 ```sh
+git clone https://github.com/carabistouflette/goose-task.git
+cd goose-task
 make setup
 make check test test-debug property
 make sanitize SANITIZER_CC=gcc
@@ -21,8 +23,7 @@ make sanitize SANITIZER_CC=clang
 make bench
 ```
 
-`make setup` fetches the full compiler commit in `GOOSE_REVISION`, also used by
-Goose JSON in this workspace. To reuse that exact compiler, pass
+`make setup` fetches the full compiler commit in `GOOSE_REVISION`, also used for the initial independent validation. To reuse that exact compiler, pass
 `GOOSE=/absolute/path/to/goose` to Make. This library has no third-party package
 dependencies. Direct source import example:
 

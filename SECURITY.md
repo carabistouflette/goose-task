@@ -1,9 +1,8 @@
 # Security policy
 
-This library is experimental and currently an unpublished standalone checkout.
-Only its latest source is maintained. Report suspected vulnerabilities privately
-to the project maintainer; do not disclose sensitive inputs in public issues or
-CI logs. A public release must provide a verified private reporting destination.
+This library is experimental. Only its latest source is maintained. Report suspected
+vulnerabilities through [GitHub private reporting](https://github.com/carabistouflette/goose-task/security/advisories/new).
+Do not disclose sensitive inputs in public issues or CI logs.
 Include affected commit, compiler revision, platform and a minimal reproducer;
 omit credentials and production data.
 
