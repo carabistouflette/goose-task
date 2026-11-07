@@ -15,9 +15,7 @@ test targets. Honk compiles targets sequentially, owns process supervision and
 runs bounded cohorts. The task library does not spawn or supervise processes.
 See Honk's [parallel-test contracts](https://github.com/carabistouflette/honk/blob/0d8093487547462556bf41f86e7e7c794ca6f86d/docs/parallel-tests.md)
 for failure, cancellation and supervision limits. Default test execution remains
-sequential. [Real-project qualification](https://github.com/carabistouflette/goose-libs/blob/b3cf0eecbcbc3822dd7cbaa2a25aaa814d7354d5/docs/publication-evidence/honk-real-qualification/README.md)
-retained cohorts; compilation dominated
-the measured workload, so this is not a general speedup claim.
+sequential. This integration does not establish a general speedup claim.
 
 ## goose-msgpack plan example
 
