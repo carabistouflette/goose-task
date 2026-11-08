@@ -19,18 +19,22 @@ fn detail_compile(count: i64, edges: const Edge[:], limits: Limits&) -> Graph, E
     }
     if count < 0 || count > limits.tasks { return Graph { .. }, Error { kind: ErrorKind.TaskLimit, .. }; }
     if edges.len > limits.edges { return Graph { .. }, Error { kind: ErrorKind.EdgeLimit, .. }; }
+    // Every endpoint is validated before any indexed allocation, as design.md requires.
     for edge, i in edges {
         if edge.before < 0 || edge.before >= count { return Graph { .. }, Error { kind: ErrorKind.InvalidTask, edge: i, task: edge.before }; }
         if edge.after < 0 || edge.after >= count { return Graph { .. }, Error { kind: ErrorKind.InvalidTask, edge: i, task: edge.after }; }
     }
     var offsets: i64[>..] = []; var targets: i64[>..] = [];
     var degrees: i64[>..] = []; var order: i64[>..] = [];
-    for i in count + 1 { offsets.push(0); }
-    for i in count { degrees.push(0); }
+    // Sized once instead of pushed element by element: resize of a uniform
+    // fill emits one memset followed by top/length updates, instead of a store
+    // and top/length updates for every element.
+    offsets.resize(count + 1, 0);
+    degrees.resize(count, 0);
+    targets.resize(edges.len, 0);
     for edge in edges { offsets[edge.before + 1]++; degrees[edge.after]++; }
     for i in count { offsets[i + 1] += offsets[i]; }
     var positions = copy(offsets);
-    for i in edges.len { targets.push(0); }
     for edge in edges { targets[positions[edge.before]] = edge.after; positions[edge.before]++; }
     var remaining = copy(degrees);
     for i in count { if remaining[i] == 0 { order.push(i); } }

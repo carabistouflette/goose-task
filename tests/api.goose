@@ -121,8 +121,52 @@ fn wide_success() {
     assert(task::take(s).kind == task::DispatchKind.Done);
     assert(task::summary(s).succeeded == task::MAX_TASKS);
 }
+// Endpoint validation runs over the whole edge array before the CSR arrays are
+// built, so a bad endpoint is reported with its own index wherever it sits, and
+// the first offender in input order wins.
+fn endpoint_order() {
+    var limits = task::Limits { .. };
+    var late: task::Edge[>..] = [];
+    for i in 4095 { late.push(task::Edge { i, i + 1 }); }
+    late.push(task::Edge { 0, 4096 });
+    let late_order, late_error = task::plan(4096, late, limits);
+    assert(late_order.len == 0 && late_error.kind == task::ErrorKind.InvalidTask);
+    assert(late_error.edge == 4095 && late_error.task == 4096);
+    var early: task::Edge[>..] = [task::Edge { -1, 0 }];
+    for i in 4095 { early.push(task::Edge { i, i + 1 }); }
+    let early_order, early_error = task::plan(4096, early, limits);
+    assert(early_order.len == 0 && early_error.kind == task::ErrorKind.InvalidTask);
+    assert(early_error.edge == 0 && early_error.task == -1);
+    // The earlier edge is reported even though a later one is also invalid.
+    let first_order, first = task::plan(3, [task::Edge { 0, 1 }, task::Edge { 5, 0 }, task::Edge { 0, 9 }], limits);
+    assert(first_order.len == 0 && first.kind == task::ErrorKind.InvalidTask && first.edge == 1 && first.task == 5);
+    // Within one edge, `before` is reported before `after`.
+    let both_order, both = task::plan(3, [task::Edge { 9, 8 }], limits);
+    assert(both_order.len == 0 && both.kind == task::ErrorKind.InvalidTask && both.edge == 0 && both.task == 9);
+    // A rejected start leaves the scheduler untouched and reusable.
+    var s = task::Scheduler { .. };
+    assert(task::start(s, 4096, late, 4, limits).kind == task::ErrorKind.InvalidTask);
+    assert(task::take(s).kind == task::DispatchKind.InvalidState);
+    assert(task::summary(s).tasks == 0 && task::state(s, 4095) == task::State.Unknown);
+    assert(task::start(s, 4096, early, 4, limits).kind == task::ErrorKind.InvalidTask);
+    assert(task::take(s).kind == task::DispatchKind.InvalidState);
+    assert(task::start(s, 2, [task::Edge { 0, 1 }], 1, limits).kind == task::ErrorKind.None);
+    assert(task::take(s).task == 0);
+    assert(task::finish(s, 0, true).kind == task::ErrorKind.None);
+    assert(task::take(s).task == 1);
+    assert(task::finish(s, 1, true).kind == task::ErrorKind.None);
+    assert(task::take(s).kind == task::DispatchKind.Done);
+    // Duplicate edges stay a valid plan, and exact limits are accepted.
+    var duplicates: task::Edge[>..] = [];
+    for i in 65536 { duplicates.push(task::Edge { 0, 1 }); }
+    let duplicate_order, duplicate_error = task::plan(2, duplicates, limits);
+    assert(duplicate_error.kind == task::ErrorKind.None && duplicate_order == [0, 1]);
+    var exact = task::Limits { tasks: 2, edges: 65536 };
+    let exact_order, exact_error = task::plan(2, duplicates, exact);
+    assert(exact_error.kind == task::ErrorKind.None && exact_order == [0, 1]);
+}
 fn main() {
-    validation(); failures_and_ownership(); boundaries(); wide_success();
+    validation(); endpoint_order(); failures_and_ownership(); boundaries(); wide_success();
     var limits = task::Limits { .. };
     let edges = [task::Edge { 0, 2 }, task::Edge { 1, 2 }, task::Edge { 2, 3 }, task::Edge { 0, 2 }];
     let order, error = task::plan(5, edges, limits);
