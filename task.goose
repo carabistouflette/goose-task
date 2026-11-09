@@ -26,9 +26,9 @@ fn detail_compile(count: i64, edges: const Edge[:], limits: Limits&) -> Graph, E
     }
     var offsets: i64[>..] = []; var targets: i64[>..] = [];
     var degrees: i64[>..] = []; var order: i64[>..] = [];
-    // Sized once instead of pushed element by element: resize of a uniform
-    // fill emits one memset followed by top/length updates, instead of a store
-    // and top/length updates for every element.
+    // Size the three CSR arrays explicitly after endpoint validation.
+    // Optimizers may also lower push-based zero fills to memset; performance
+    // depends on the compiler and graph, not just this source-level change.
     offsets.resize(count + 1, 0);
     degrees.resize(count, 0);
     targets.resize(edges.len, 0);

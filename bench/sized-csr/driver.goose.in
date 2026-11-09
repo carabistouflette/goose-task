@@ -1,0 +1,309 @@
+// SPDX-License-Identifier: Apache-2.0
+// Paired measurement driver for goose-task CSR sized-fill qualification.
+// Identical source for baseline and candidate: only the import path differs.
+// Fixtures are built before any timed region; every timed region wraps exactly
+// one plan()/start()/rejected-plan() call. Verification and checksums run
+// outside the timed regions.
+import task from "TASKPATH";
+import std;
+import os;
+
+// ---------------------------------------------------------------- fixtures
+// All fixtures are built once in main() before timing starts.
+
+fn build_chain(n: i64) -> task::Edge[>..] {
+    var edges: task::Edge[>..] = [];
+    for i in n - 1 { edges.push(task::Edge { i + 1, i }); }
+    edges
+}
+
+fn build_star(n: i64) -> task::Edge[>..] {
+    var edges: task::Edge[>..] = [];
+    for i in n - 1 { edges.push(task::Edge { 0, i + 1 }); }
+    edges
+}
+
+// Dense acyclic: every edge strictly increases the index, ~16 out-edges/node.
+fn build_dense(n: i64) -> task::Edge[>..] {
+    var edges: task::Edge[>..] = [];
+    for i in n {
+        for k in 16 {
+            let target = i + 1 + k * 7;
+            if target < n { edges.push(task::Edge { i, target }); }
+        }
+    }
+    edges
+}
+
+// Sparse seeded acyclic: deterministic LCG, forward-only edges.
+fn build_sparse(n: i64, count: i64) -> task::Edge[>..] {
+    var edges: task::Edge[>..] = [];
+    var state: i64 = 20261109;
+    for i in count {
+        state = (state * 1103515245 + 12345) % 2147483648;
+        let from = state % n;
+        state = (state * 1103515245 + 12345) % 2147483648;
+        let span = state % 64 + 1;
+        let to = from + span;
+        if to < n { edges.push(task::Edge { from, to }); }
+    }
+    edges
+}
+
+fn build_duplicates(count: i64) -> task::Edge[>..] {
+    var edges: task::Edge[>..] = [];
+    for i in count { edges.push(task::Edge { 0, 1 }); }
+    edges
+}
+
+// Invalid endpoint at the END of the edge array.
+fn build_invalid_last(n: i64) -> task::Edge[>..] {
+    var edges: task::Edge[>..] = [];
+    for i in n - 1 { edges.push(task::Edge { i, i + 1 }); }
+    edges.push(task::Edge { 0, n });
+    edges
+}
+
+// Invalid endpoint at the START of the edge array.
+fn build_invalid_first(n: i64) -> task::Edge[>..] {
+    var edges: task::Edge[>..] = [task::Edge { -1, 0 }];
+    for i in n - 1 { edges.push(task::Edge { i, i + 1 }); }
+    edges
+}
+
+// Real cycle: 0 -> 1 -> ... -> n-2 -> 0. No zero in-degree node exists.
+fn build_cyclic(n: i64) -> task::Edge[>..] {
+    var edges: task::Edge[>..] = [];
+    for i in n - 2 { edges.push(task::Edge { i, i + 1 }); }
+    edges.push(task::Edge { n - 2, 0 });
+    edges
+}
+
+// ------------------------------------------------------------ verification
+// Runs outside every timed region. Establishes that both binaries compute the
+// same, contract-correct answers before and after the timed phases.
+
+fn indegrees(n: i64, edges: const task::Edge[:]) -> i64[>..] {
+    var counts: i64[>..] = [];
+    counts.resize(n, 0);
+    for edge in edges { counts[edge.after]++; }
+    counts
+}
+
+fn verify_plan(name: const u8[:], n: i64, edges: const task::Edge[:]) -> i64 {
+    var limits = task::Limits { .. };
+    let order, error = task::plan(n, edges, limits);
+    assert(error.kind == task::ErrorKind.None);
+    assert(order.len == n);
+    // Independent topological check: every edge must respect the position map.
+    var position: i64[>..] = [];
+    position.resize(n, -1);
+    for id, i in order { position[id] = i; }
+    for edge in edges {
+        assert(position[edge.before] >= 0 && position[edge.after] >= 0);
+        assert(position[edge.before] < position[edge.after]);
+    }
+    // Determinism: a second call must return the identical order.
+    let again, again_error = task::plan(n, edges, limits);
+    assert(again_error.kind == task::ErrorKind.None && again.len == order.len);
+    for id, i in order { assert(again[i] == id); }
+    // Initial zero-degree tasks must enter in ascending ID order, as a prefix.
+    let counts = indegrees(n, edges);
+    var seen_nonzero = false;
+    var previous: i64 = -1;
+    for id in order {
+        if counts[id] == 0 {
+            assert(!seen_nonzero);
+            assert(id > previous);
+            previous = id;
+        } else { seen_nonzero = true; }
+    }
+    print("VERIFY\t", name, "\tplan_ok\t", order.len, "\t", edges.len);
+    order.len
+}
+
+fn verify_start(name: const u8[:], n: i64, edges: const task::Edge[:]) -> i64 {
+    var limits = task::Limits { .. };
+    var s = task::Scheduler { .. };
+    assert(task::start(s, n, edges, 16, limits).kind == task::ErrorKind.None);
+    assert(task::summary(s).tasks == n);
+    var dispatched: i64 = 0;
+    while true {
+        let next = task::take(s);
+        if next.kind == task::DispatchKind.Done { break; }
+        assert(next.kind == task::DispatchKind.Ready);
+        assert(task::finish(s, next.task, true).kind == task::ErrorKind.None);
+        dispatched++;
+    }
+    let result = task::summary(s);
+    assert(dispatched == n && result.succeeded == n && result.running == 0);
+    print("VERIFY\t", name, "\tstart_ok\t", dispatched);
+    dispatched
+}
+
+fn verify_reject(name: const u8[:], n: i64, edges: const task::Edge[:], expected: task::ErrorKind, expected_edge: i64, expected_task: i64) -> i64 {
+    var limits = task::Limits { .. };
+    let order, error = task::plan(n, edges, limits);
+    assert(order.len == 0 && error.kind == expected);
+    assert(error.edge == expected_edge && error.task == expected_task);
+    // A rejected start must leave the owner uninitialized and reusable.
+    var s = task::Scheduler { .. };
+    assert(task::start(s, n, edges, 1, limits).kind == expected);
+    assert(task::take(s).kind == task::DispatchKind.InvalidState);
+    assert(task::summary(s).tasks == 0 && task::state(s, 0) == task::State.Unknown);
+    print("VERIFY\t", name, "\treject_ok\t", error.edge, "\t", error.task);
+    error.edge
+}
+
+// ------------------------------------------------------------ timed phases
+// `begin`/`elapsed` bracket exactly one library call. Everything else is out.
+
+fn time_plan(label: const u8[:], name: const u8[:], n: i64, edges: const task::Edge[:], warmup: i64, iterations: i64) -> i64 {
+    var limits = task::Limits { .. };
+    var checksum: i64 = 0;
+    for round in warmup {
+        let order, error = task::plan(n, edges, limits);
+        assert(error.kind == task::ErrorKind.None && order.len == n);
+        checksum += order.len;
+    }
+    for round in iterations {
+        let begin = clock_ns();
+        let order, error = task::plan(n, edges, limits);
+        let elapsed = clock_ns() - begin;
+        assert(error.kind == task::ErrorKind.None && order.len == n);
+        checksum += order.len;
+        print("SAMPLE\t", label, "\t", name, "\tplan\t", round, "\t", elapsed);
+    }
+    assert(checksum == (warmup + iterations) * n);
+    checksum
+}
+
+fn time_start(label: const u8[:], name: const u8[:], n: i64, edges: const task::Edge[:], warmup: i64, iterations: i64) -> i64 {
+    var limits = task::Limits { .. };
+    var checksum: i64 = 0;
+    for round in warmup {
+        var s = task::Scheduler { .. };
+        assert(task::start(s, n, edges, 16, limits).kind == task::ErrorKind.None);
+        assert(task::summary(s).tasks == n);
+        checksum += task::summary(s).tasks;
+    }
+    for round in iterations {
+        var s = task::Scheduler { .. };
+        let begin = clock_ns();
+        let error = task::start(s, n, edges, 16, limits);
+        let elapsed = clock_ns() - begin;
+        assert(error.kind == task::ErrorKind.None);
+        assert(task::summary(s).tasks == n);
+        checksum += task::summary(s).tasks;
+        print("SAMPLE\t", label, "\t", name, "\tstart\t", round, "\t", elapsed);
+    }
+    assert(checksum == (warmup + iterations) * n);
+    checksum
+}
+
+fn time_reject(label: const u8[:], name: const u8[:], n: i64, edges: const task::Edge[:], expected: task::ErrorKind, warmup: i64, iterations: i64) -> i64 {
+    var limits = task::Limits { .. };
+    var checksum: i64 = 0;
+    for round in warmup {
+        let order, error = task::plan(n, edges, limits);
+        assert(order.len == 0 && error.kind == expected);
+        checksum += 1;
+    }
+    for round in iterations {
+        let begin = clock_ns();
+        let order, error = task::plan(n, edges, limits);
+        let elapsed = clock_ns() - begin;
+        assert(order.len == 0 && error.kind == expected);
+        checksum += 1;
+        print("SAMPLE\t", label, "\t", name, "\tplan_reject\t", round, "\t", elapsed);
+    }
+    assert(checksum == warmup + iterations);
+    checksum
+}
+
+fn main() {
+    let argv = args();
+    assert(argv.len >= 2);
+    let label = argv[1];
+    var warmup: i64 = 5;
+    var iterations: i64 = 30;
+    if argv.len > 2 { let value, ok = parse_int(argv[2]); assert(ok && value > 0 && value <= 10000); iterations = value; }
+    if argv.len > 3 { let value, ok = parse_int(argv[3]); assert(ok && value > 0 && value <= 1000); warmup = value; }
+
+    // --- fixtures: built before any timed region -------------------------
+    var empty: task::Edge[>..] = [];
+    let tiny = build_chain(8);
+    let chain = build_chain(task::MAX_TASKS);
+    let star = build_star(4096);
+    let dense = build_dense(4096);
+    let sparse = build_sparse(8192, 8192);
+    let dups = build_duplicates(65536);
+    let invalid_last = build_invalid_last(4096);
+    let invalid_first = build_invalid_first(4096);
+    let cyclic = build_cyclic(4096);
+
+    // --- verification before timing --------------------------------------
+    var verified: i64 = 0;
+    verified += verify_plan("empty", 0, empty);
+    verified += verify_plan("tiny", 8, tiny);
+    verified += verify_plan("chain", task::MAX_TASKS, chain);
+    verified += verify_plan("star", 4096, star);
+    verified += verify_plan("dense", 4096, dense);
+    verified += verify_plan("sparse", 8192, sparse);
+    verified += verify_plan("dups", 2, dups);
+    verified += verify_start("empty", 0, empty);
+    verified += verify_start("tiny", 8, tiny);
+    verified += verify_start("chain", task::MAX_TASKS, chain);
+    verified += verify_start("star", 4096, star);
+    verified += verify_start("dense", 4096, dense);
+    verified += verify_start("sparse", 8192, sparse);
+    verified += verify_start("dups", 2, dups);
+    verified += verify_reject("invalid_last", 4096, invalid_last, task::ErrorKind.InvalidTask, 4095, 4096);
+    verified += verify_reject("invalid_first", 4096, invalid_first, task::ErrorKind.InvalidTask, 0, -1);
+    verified += verify_reject("cyclic", 4096, cyclic, task::ErrorKind.Cycle, -1, 0);
+    print("VERIFY_TOTAL\t", label, "\t", verified);
+
+    // --- timed phases ----------------------------------------------------
+    var checksum: i64 = 0;
+    checksum += time_plan(label, "empty", 0, empty, warmup, iterations);
+    checksum += time_plan(label, "tiny", 8, tiny, warmup, iterations);
+    checksum += time_plan(label, "chain", task::MAX_TASKS, chain, warmup, iterations);
+    checksum += time_plan(label, "star", 4096, star, warmup, iterations);
+    checksum += time_plan(label, "dense", 4096, dense, warmup, iterations);
+    checksum += time_plan(label, "sparse", 8192, sparse, warmup, iterations);
+    checksum += time_plan(label, "dups", 2, dups, warmup, iterations);
+    checksum += time_start(label, "empty", 0, empty, warmup, iterations);
+    checksum += time_start(label, "tiny", 8, tiny, warmup, iterations);
+    checksum += time_start(label, "chain", task::MAX_TASKS, chain, warmup, iterations);
+    checksum += time_start(label, "star", 4096, star, warmup, iterations);
+    checksum += time_start(label, "dense", 4096, dense, warmup, iterations);
+    checksum += time_start(label, "sparse", 8192, sparse, warmup, iterations);
+    checksum += time_start(label, "dups", 2, dups, warmup, iterations);
+    checksum += time_reject(label, "invalid_last", 4096, invalid_last, task::ErrorKind.InvalidTask, warmup, iterations);
+    checksum += time_reject(label, "invalid_first", 4096, invalid_first, task::ErrorKind.InvalidTask, warmup, iterations);
+    checksum += time_reject(label, "cyclic", 4096, cyclic, task::ErrorKind.Cycle, warmup, iterations);
+    print("CHECKSUM\t", label, "\t", checksum);
+
+    // --- verification after timing ---------------------------------------
+    var reverified: i64 = 0;
+    reverified += verify_plan("empty", 0, empty);
+    reverified += verify_plan("tiny", 8, tiny);
+    reverified += verify_plan("chain", task::MAX_TASKS, chain);
+    reverified += verify_plan("star", 4096, star);
+    reverified += verify_plan("dense", 4096, dense);
+    reverified += verify_plan("sparse", 8192, sparse);
+    reverified += verify_plan("dups", 2, dups);
+    reverified += verify_start("empty", 0, empty);
+    reverified += verify_start("tiny", 8, tiny);
+    reverified += verify_start("chain", task::MAX_TASKS, chain);
+    reverified += verify_start("star", 4096, star);
+    reverified += verify_start("dense", 4096, dense);
+    reverified += verify_start("sparse", 8192, sparse);
+    reverified += verify_start("dups", 2, dups);
+    reverified += verify_reject("invalid_last", 4096, invalid_last, task::ErrorKind.InvalidTask, 4095, 4096);
+    reverified += verify_reject("invalid_first", 4096, invalid_first, task::ErrorKind.InvalidTask, 0, -1);
+    reverified += verify_reject("cyclic", 4096, cyclic, task::ErrorKind.Cycle, -1, 0);
+    assert(reverified == verified);
+    print("VERIFY_TOTAL\t", label, "\t", reverified);
+    print("DONE\t", label);
+}
